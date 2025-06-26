@@ -1,0 +1,299 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ENGINEER
+  MANAGER
+  SUPERVISOR
+  ADMIN
+}
+
+enum ConstructionPhase {
+  DRAIN
+  BASKET
+  SEALING
+}
+
+enum RoadSide {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum PointStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  password    String
+  role        UserRole  @default(ENGINEER)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  gpsPoints             GpsPoint[]
+  photos                Photo[]
+  activities            Activity[]
+  // NEW DYNAMIC RELATIONS:
+  createdActivities     ConstructionActivity[] @relation("CreatedActivities")
+  assignedActivities    ProjectActivity[]      @relation("AssignedActivities")
+  assignedTasks         Task[]                 @relation("AssignedTasks")
+  activityLogs          ActivityLog[]          @relation("UserActivityLogs")
+
+  @@map("users")
+}
+
+model Project {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  totalDistance   Float     // Total distance in meters
+  startDate       DateTime
+  estimatedEndDate DateTime
+  sponsor         String?   // e.g., "ITCFA - Exxon Mobile"
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  gpsPoints         GpsPoint[]
+  activities        Activity[]
+  // NEW DYNAMIC RELATIONS:
+  projectActivities ProjectActivity[]
+  activityLogs      ActivityLog[]      @relation("ProjectActivityLogs")
+
+  @@map("projects")
+}
+
+model GpsPoint {
+  id              String              @id @default(cuid())
+  latitude        Float
+  longitude       Float
+  phase           ConstructionPhase
+  side            RoadSide
+  distance        Float               // Distance covered in meters
+  status          PointStatus         @default(PENDING)
+  notes           String?
+  elevation       Float?              // Optional elevation data
+  accuracy        Float?              // GPS accuracy in meters
+  timestamp       DateTime            @default(now())
+  verifiedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  projectId       String
+  project         Project             @relation(fields: [projectId], references: [id])
+  photos          Photo[]
+  activities      Activity[]
+  // NEW DYNAMIC RELATION:
+  activityId      String?
+  activity        ConstructionActivity? @relation("ActivityGpsPoints", fields: [activityId], references: [id])
+
+  @@map("gps_points")
+}
+
+model Photo {
+  id              String    @id @default(cuid())
+  filename        String
+  originalName    String
+  path            String
+  size            Int
+  mimeType        String
+  description     String?
+  timestamp       DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  gpsPointId      String
+  gpsPoint        GpsPoint  @relation(fields: [gpsPointId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
+}
+
+model Activity {
+  id              String              @id @default(cuid())
+  type            String              // e.g., "GPS_POINT_ADDED", "PHOTO_UPLOADED", "STATUS_CHANGED"
+  description     String
+  metadata        String?             // JSON string for additional data
+  timestamp       DateTime            @default(now())
+
+  // Relations
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  projectId       String
+  project         Project             @relation(fields: [projectId], references: [id])
+  gpsPointId      String?
+  gpsPoint        GpsPoint?           @relation(fields: [gpsPointId], references: [id])
+
+  @@map("activities")
+}
+
+model Session {
+  id              String    @id @default(cuid())
+  userId          String
+  token           String    @unique
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+
+  @@map("sessions")
+}
+
+// Dynamic Construction Activities (User-defined)
+model ConstructionActivity {
+  id              String    @id @default(cuid())
+  name            String    // e.g., "Line Drain Construction", "Custom Activity"
+  description     String?
+  color           String    @default("#3b82f6") // Hex color for UI
+  isActive        Boolean   @default(true)
+  createdBy       String
+  createdByUser   User      @relation("CreatedActivities", fields: [createdBy], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  projectActivities ProjectActivity[]
+  tasks           Task[]
+  gpsPoints       GpsPoint[] @relation("ActivityGpsPoints")
+
+  @@map("construction_activities")
+}
+
+// Project-specific activities with assignments
+model ProjectActivity {
+  id              String              @id @default(cuid())
+  projectId       String
+  project         Project             @relation(fields: [projectId], references: [id])
+  activityId      String
+  activity        ConstructionActivity @relation(fields: [activityId], references: [id])
+
+  // Dynamic assignment
+  assignedUserId  String?
+  assignedUser    User?               @relation("AssignedActivities", fields: [assignedUserId], references: [id])
+
+  // Progress tracking
+  status          ActivityStatus      @default(PLANNED)
+  progress        Float               @default(0) // 0-100 percentage
+  startDate       DateTime?
+  estimatedEndDate DateTime?
+  actualEndDate   DateTime?
+
+  // Measurements
+  totalLength     Float?              // in meters
+  completedLength Float?              @default(0)
+  estimatedHours  Float?
+  actualHours     Float?              @default(0)
+
+  // Metadata
+  priority        Priority            @default(MEDIUM)
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  tasks           Task[]
+  activities      ActivityLog[]
+
+  @@unique([projectId, activityId])
+  @@map("project_activities")
+}
+
+// Dynamic task breakdown
+model Task {
+  id                String           @id @default(cuid())
+  name              String
+  description       String?
+
+  // Flexible assignment
+  projectActivityId String?
+  projectActivity   ProjectActivity? @relation(fields: [projectActivityId], references: [id])
+  activityId        String?
+  activity          ConstructionActivity? @relation(fields: [activityId], references: [id])
+
+  assignedUserId    String?
+  assignedUser      User?            @relation("AssignedTasks", fields: [assignedUserId], references: [id])
+
+  // Progress
+  status            TaskStatus       @default(PENDING)
+  progress          Float            @default(0) // 0-100 percentage
+  priority          Priority         @default(MEDIUM)
+
+  // Time tracking
+  estimatedHours    Float?
+  actualHours       Float?           @default(0)
+  startDate         DateTime?
+  dueDate           DateTime?
+  completedDate     DateTime?
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("tasks")
+}
+
+// Activity logging for real-time updates
+model ActivityLog {
+  id                String           @id @default(cuid())
+  type              String           // "PROGRESS_UPDATE", "STATUS_CHANGE", "ASSIGNMENT", etc.
+  description       String
+
+  // Relations
+  userId            String
+  user              User             @relation("UserActivityLogs", fields: [userId], references: [id])
+  projectId         String
+  project           Project          @relation("ProjectActivityLogs", fields: [projectId], references: [id])
+  projectActivityId String?
+  projectActivity   ProjectActivity? @relation(fields: [projectActivityId], references: [id])
+
+  // Data
+  oldValue          String?          // JSON string
+  newValue          String?          // JSON string
+  metadata          String?          // Additional JSON data
+
+  timestamp         DateTime         @default(now())
+
+  @@map("activity_logs")
+}
