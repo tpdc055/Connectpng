@@ -93,7 +93,7 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
     }
 
     const script = document.createElement('script');
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY';
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyDxJvxw-6kkUwib2KsWF2RqIkeF42KIIRs';
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=geometry`;
     script.async = true;
     script.defer = true;
