@@ -273,9 +273,10 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
     loadSettings()
   }, [])
 
-  useEffect(() => {
-    saveSettings()
-  }, [settings])
+  // Temporarily disabled auto-save during setup to prevent 401 errors
+  // useEffect(() => {
+  //   saveSettings()
+  // }, [settings])
 
   return (
     <SystemSettingsContext.Provider value={{
