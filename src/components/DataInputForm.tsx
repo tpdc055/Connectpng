@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface DataInputFormProps {
 }
 
 export function DataInputForm({ projectId, onDataAdded }: DataInputFormProps) {
+  const { settings } = useSystemSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     latitude: "",
@@ -141,7 +143,7 @@ export function DataInputForm({ projectId, onDataAdded }: DataInputFormProps) {
           </CardTitle>
         </div>
         <CardDescription>
-          Record GPS coordinates for construction activities on Maria Pori Road
+          Record GPS coordinates for construction activities
         </CardDescription>
         <div className="flex items-center gap-2">
           {formData.phase && (
@@ -153,7 +155,7 @@ export function DataInputForm({ projectId, onDataAdded }: DataInputFormProps) {
             </Badge>
           )}
           <Badge variant="secondary" className="text-xs">
-            15km Project - Central Province PNG
+            {settings.defaultProjectName} - {settings.region}
           </Badge>
         </div>
       </CardHeader>
@@ -292,12 +294,12 @@ export function DataInputForm({ projectId, onDataAdded }: DataInputFormProps) {
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
               <div className="text-xs text-yellow-800">
-                <div className="font-medium mb-1">PNG Project Guidelines</div>
+                <div className="font-medium mb-1">Project Guidelines</div>
                 <div className="space-y-1 text-yellow-700">
-                  <div>• Use PNG Grid coordinate system where applicable</div>
+                  <div>• Use standard coordinate system where applicable</div>
                   <div>• Record accurate GPS coordinates for quality assurance</div>
                   <div>• Follow local construction standards and safety protocols</div>
-                  <div>• Document progress for ITCFA - Exxon Mobile reporting</div>
+                  <div>• Document progress for {settings.organizationName} reporting</div>
                 </div>
               </div>
             </div>
@@ -328,9 +330,9 @@ export function DataInputForm({ projectId, onDataAdded }: DataInputFormProps) {
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-2">
               <div className="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded-sm"></div>
-              <span>Connect PNG Program</span>
+              <span>Infrastructure Program</span>
             </div>
-            <span>Maria Pori Road Infrastructure</span>
+            <span>Infrastructure Development</span>
           </div>
         </div>
       </CardContent>

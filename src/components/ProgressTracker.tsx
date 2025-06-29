@@ -142,7 +142,7 @@ export function ProgressTracker({ activePhase, projectId }: ProgressTrackerProps
             </CardTitle>
           </div>
           <CardDescription>
-            Real-time tracking for {currentPhase.title} on Maria Pori Road
+            Real-time tracking for {currentPhase.title}
           </CardDescription>
           <div className="flex items-center gap-2">
             <Badge
@@ -343,9 +343,9 @@ export function ProgressTracker({ activePhase, projectId }: ProgressTrackerProps
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-2">
             <div className="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded-sm"></div>
-            <span>Connect PNG Program</span>
+            <span>Infrastructure Program</span>
           </div>
-          <span>Maria Pori Road Infrastructure Development</span>
+          <span>Infrastructure Development</span>
         </div>
       </div>
     </div>

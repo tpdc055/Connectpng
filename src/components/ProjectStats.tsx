@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -22,6 +23,8 @@ interface ProjectStatsProps {
 }
 
 export function ProjectStats({ projectData }: ProjectStatsProps) {
+  const { settings } = useSystemSettings();
+
   // Mock data for demonstration
   const mockStats = {
     totalDistance: 15000, // 15km in meters
@@ -106,10 +109,10 @@ export function ProjectStats({ projectData }: ProjectStatsProps) {
             </CardTitle>
           </div>
           <CardDescription>
-            Maria Pori Road Construction Progress - ITCFA Exxon Mobile Project
+            Road Construction Progress - Infrastructure Project
           </CardDescription>
           <Badge variant="outline" className="w-fit bg-yellow-50 border-yellow-400 text-yellow-800">
-            Central Province, PNG
+            {settings.region}, {settings.country}
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -241,12 +244,12 @@ export function ProjectStats({ projectData }: ProjectStatsProps) {
             </div>
           </div>
 
-          {/* ITCFA Exxon Mobile Branding */}
+          {/* Organization Branding */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
             <div className="text-xs text-blue-800">
-              <div className="font-medium mb-1">💼 ITCFA - Exxon Mobile</div>
+              <div className="font-medium mb-1">🏗️ {settings.organizationName}</div>
               <div className="text-blue-700">
-                Investing in PNG infrastructure development and local capacity building
+                {settings.defaultProjectDescription}
               </div>
             </div>
           </div>
@@ -300,7 +303,7 @@ export function ProjectStats({ projectData }: ProjectStatsProps) {
             <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded-sm"></div>
-                <span>Connect PNG Program</span>
+                <span>Infrastructure Program</span>
               </div>
               <span>Real-time monitoring system</span>
             </div>

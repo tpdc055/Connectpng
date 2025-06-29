@@ -118,8 +118,8 @@ export async function POST(
         activityId,
         assignedUserId: assignedUserId || null,
         priority: priority || 'MEDIUM',
-        estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
-        totalLength: totalLength ? parseFloat(totalLength) : null,
+        estimatedHours: estimatedHours ? Number.parseFloat(estimatedHours) : null,
+        totalLength: totalLength ? Number.parseFloat(totalLength) : null,
         notes: notes?.trim() || null,
         status: 'PLANNED'
       },

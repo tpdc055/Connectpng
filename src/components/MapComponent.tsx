@@ -6,9 +6,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, Satellite, ZoomIn, ZoomOut, RotateCcw, Layers } from "lucide-react";
 
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  totalDistance?: number;
+  status: string;
+  projectType?: string;
+  latitude?: number;
+  longitude?: number;
+  province?: {
+    id: string;
+    name: string;
+    code: string;
+    region: string;
+    capital?: string;
+  };
+}
+
 interface MapComponentProps {
   activePhase: string;
   projectId?: string;
+  project?: Project;
 }
 
 // Google Maps types
@@ -42,7 +61,7 @@ interface GPSPoint {
   timestamp: string;
 }
 
-export function MapComponent({ activePhase, projectId }: MapComponentProps) {
+export function MapComponent({ activePhase, projectId, project }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -52,17 +71,38 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
   const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid'>('roadmap');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Maria Pori Road approximate coordinates (Central Province, PNG)
-  const MARIA_PORI_CENTER = {
-    lat: -9.4438, // Central Province coordinates
-    lng: 147.1803
+  // Dynamic map center based on project location
+  const getProjectCenter = () => {
+    // First priority: Use project's specific coordinates if available
+    if (project?.latitude && project?.longitude) {
+      return {
+        lat: Number(project.latitude),
+        lng: Number(project.longitude)
+      };
+    }
+
+    // Second priority: Use GPS points center if available
+    if (gpsPoints.length > 0) {
+      const latSum = gpsPoints.reduce((sum, point) => sum + point.latitude, 0);
+      const lngSum = gpsPoints.reduce((sum, point) => sum + point.longitude, 0);
+      return {
+        lat: latSum / gpsPoints.length,
+        lng: lngSum / gpsPoints.length
+      };
+    }
+
+    // Fallback: Default to PNG center
+    return { lat: -6.314992, lng: 143.95555 }; // PNG geographic center
   };
 
   const getPhaseColor = (phase: string) => {
     switch (phase) {
       case 'drain': return '#3B82F6'; // Blue
+      case 'Line Drain': return '#3B82F6'; // Blue
       case 'basket': return '#10B981'; // Green
+      case 'Basket Construction': return '#10B981'; // Green
       case 'sealing': return '#EF4444'; // Red
+      case 'Road Sealing': return '#EF4444'; // Red
       default: return '#6B7280'; // Gray
     }
   };
@@ -70,9 +110,12 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
   const getPhaseLabel = (phase: string) => {
     switch (phase) {
       case 'drain': return 'Line Drain Construction';
+      case 'Line Drain': return 'Line Drain Construction';
       case 'basket': return 'Basket Construction';
+      case 'Basket Construction': return 'Basket Construction';
       case 'sealing': return 'Road Sealing';
-      default: return 'Unknown Phase';
+      case 'Road Sealing': return 'Road Sealing';
+      default: return phase || 'Unknown Phase';
     }
   };
 
@@ -87,45 +130,98 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
 
   // Load Google Maps script
   useEffect(() => {
-    if (window.google) {
+    // Check if Google Maps is already loaded
+    if (window.google && window.google.maps) {
       setIsLoaded(true);
       return;
     }
 
+    // Check if script is already loading/loaded
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      // Wait for existing script to load
+      const checkLoaded = () => {
+        if (window.google && window.google.maps) {
+          setIsLoaded(true);
+        } else {
+          setTimeout(checkLoaded, 100);
+        }
+      };
+      checkLoaded();
+      return;
+    }
+
+    // Create unique callback name to avoid conflicts
+    const callbackName = `initMap_${Date.now()}`;
+
     const script = document.createElement('script');
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyDxJvxw-6kkUwib2KsWF2RqIkeF42KIIRs';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${callbackName}&libraries=geometry`;
     script.async = true;
     script.defer = true;
 
-    window.initMap = () => {
+    // Set up callback
+    (window as any)[callbackName] = () => {
       setIsLoaded(true);
+      // Clean up callback
+      delete (window as any)[callbackName];
+    };
+
+    // Handle script errors
+    script.onerror = () => {
+      console.error('Failed to load Google Maps script');
+      setIsLoaded(false);
     };
 
     document.head.appendChild(script);
 
+    // Cleanup function
     return () => {
-      // Cleanup
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existingScript) {
-        existingScript.remove();
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      if ((window as any)[callbackName]) {
+        delete (window as any)[callbackName];
       }
     };
   }, []);
 
-  // Fetch GPS points from database
+  // Fetch GPS points from database with proper authentication
   const fetchGpsPoints = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/gps-points${projectId ? `?projectId=${projectId}` : ''}`);
+
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        console.log('No auth token found - GPS points not available');
+        setGpsPoints([]);
+        return;
+      }
+
+      const response = await fetch(`/api/gps-points${projectId ? `?projectId=${projectId}` : ''}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setGpsPoints(data.gpsPoints || []);
+        console.log(`📍 Loaded ${data.gpsPoints?.length || 0} GPS points`);
+      } else if (response.status === 401) {
+        console.log('Authentication expired - please refresh your login');
+        setGpsPoints([]);
+        // Optionally trigger a token refresh here
       } else {
-        console.error('Failed to fetch GPS points');
+        console.log(`GPS API returned ${response.status} - using empty GPS data`);
+        setGpsPoints([]);
       }
     } catch (error) {
-      console.error('Error fetching GPS points:', error);
+      console.log('GPS API not available - continuing without GPS data');
+      setGpsPoints([]);
     } finally {
       setIsLoading(false);
     }
@@ -159,8 +255,9 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
   // Initialize map when loaded
   useEffect(() => {
     if (isLoaded && mapRef.current && !map) {
+      const projectCenter = getProjectCenter();
       const googleMap = new window.google.maps.Map(mapRef.current, {
-        center: MARIA_PORI_CENTER,
+        center: projectCenter,
         zoom: 14,
         mapTypeId: mapType,
         styles: [
@@ -174,7 +271,7 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
 
       setMap(googleMap);
     }
-  }, [isLoaded, mapType]);
+  }, [isLoaded, mapType, project]);
 
   // Update markers and polylines when data changes
   useEffect(() => {
@@ -235,13 +332,13 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
           }
         });
 
-        // Create info window
+        // Create info window with dynamic project name
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div class="p-3 min-w-[200px]">
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded-sm"></div>
-                <h3 class="font-semibold text-gray-800">Maria Pori Road GPS Point</h3>
+                <h3 class="font-semibold text-gray-800">${project?.name || 'PNG Road Project'} GPS Point</h3>
               </div>
               <div class="space-y-2 text-sm">
                 <div><strong>Phase:</strong> ${getPhaseLabel(point.phase)}</div>
@@ -266,7 +363,7 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
 
     setMarkers(newMarkers);
     setPolylines(newPolylines);
-  }, [map, gpsPoints, activePhase]);
+  }, [map, gpsPoints, activePhase, project]);
 
   const handleMapTypeChange = (newType: 'roadmap' | 'satellite' | 'hybrid') => {
     setMapType(newType);
@@ -289,7 +386,8 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
 
   const handleResetView = () => {
     if (map) {
-      map.setCenter(MARIA_PORI_CENTER);
+      const projectCenter = getProjectCenter();
+      map.setCenter(projectCenter);
       map.setZoom(14);
     }
   };
@@ -304,21 +402,27 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
     }
   };
 
+  // Dynamic project information
+  const projectName = project?.name || 'PNG Road Project';
+  const projectProvince = project?.province?.name || 'Unknown Province';
+  const projectDistance = project?.totalDistance || 'Unknown';
+  const projectStatus = project?.status || 'ACTIVE';
+
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
+      {/* Dynamic Header */}
       <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-red-50 border-2 border-yellow-400 rounded-lg">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-8 h-6 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded shadow-sm"></div>
-          <h3 className="text-lg font-bold text-gray-800">Maria Pori Road - Live GPS Tracking</h3>
+          <h3 className="text-lg font-bold text-gray-800">{projectName} - Live GPS Tracking</h3>
           <Badge variant="outline" className="bg-yellow-100 border-yellow-500 text-yellow-800">
-            15km Construction Project
+            {projectDistance}km Construction Project
           </Badge>
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <MapPin className="h-4 w-4" />
-            <span>Central Province, Papua New Guinea</span>
+            <span>{projectProvince}</span>
           </div>
           <div className="flex items-center gap-1">
             <Navigation className="h-4 w-4" />
@@ -405,7 +509,7 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
             <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold text-gray-700">Loading Google Maps</h3>
               <p className="text-sm text-gray-500">
-                Initializing interactive map for Maria Pori Road project...
+                Initializing interactive map for {projectName}...
               </p>
             </div>
           </div>
@@ -428,7 +532,7 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
                 <h3 className="text-lg font-semibold text-blue-800 mb-2">Google Maps API Required</h3>
                 <p className="text-blue-700 max-w-md text-sm">
                   Configure your Google Maps API key to enable real-time GPS coordinate visualization
-                  for the Maria Pori Road construction project.
+                  for the {projectName} construction project.
                 </p>
               </div>
 
@@ -454,8 +558,8 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
             <span className="font-medium">Line Drain Phase</span>
           </div>
           <div className="text-blue-700 mt-1">
-            {gpsPoints.filter(p => p.phase === 'drain').length} GPS points •
-            {gpsPoints.filter(p => p.phase === 'drain' && p.status === 'COMPLETED').length} completed
+            {gpsPoints.filter(p => p.phase === 'drain' || p.phase === 'Line Drain').length} GPS points •
+            {gpsPoints.filter(p => (p.phase === 'drain' || p.phase === 'Line Drain') && p.status === 'COMPLETED').length} completed
           </div>
         </div>
 
@@ -465,8 +569,8 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
             <span className="font-medium">Basket Construction</span>
           </div>
           <div className="text-green-700 mt-1">
-            {gpsPoints.filter(p => p.phase === 'basket').length} GPS points •
-            {gpsPoints.filter(p => p.phase === 'basket' && p.status === 'COMPLETED').length} completed
+            {gpsPoints.filter(p => p.phase === 'basket' || p.phase === 'Basket Construction').length} GPS points •
+            {gpsPoints.filter(p => (p.phase === 'basket' || p.phase === 'Basket Construction') && p.status === 'COMPLETED').length} completed
           </div>
         </div>
 
@@ -476,20 +580,20 @@ export function MapComponent({ activePhase, projectId }: MapComponentProps) {
             <span className="font-medium">Road Sealing</span>
           </div>
           <div className="text-red-700 mt-1">
-            {gpsPoints.filter(p => p.phase === 'sealing').length} GPS points •
-            {gpsPoints.filter(p => p.phase === 'sealing' && p.status === 'COMPLETED').length} completed
+            {gpsPoints.filter(p => p.phase === 'sealing' || p.phase === 'Road Sealing').length} GPS points •
+            {gpsPoints.filter(p => (p.phase === 'sealing' || p.phase === 'Road Sealing') && p.status === 'COMPLETED').length} completed
           </div>
         </div>
       </div>
 
-      {/* Footer Info */}
+      {/* Dynamic Footer Info */}
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-2">
             <div className="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded-sm"></div>
             <span>Connect PNG Program • Real-time GPS Monitoring</span>
           </div>
-          <span>Central Province, Papua New Guinea • ITCFA - Exxon Mobile Project</span>
+          <span>{projectProvince} • {projectName}</span>
         </div>
       </div>
     </div>

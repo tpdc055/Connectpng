@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ interface BulkGPSImportProps {
 }
 
 export function BulkGPSImport({ onImportSuccess }: BulkGPSImportProps) {
+  const { settings } = useSystemSettings();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -166,7 +168,7 @@ export function BulkGPSImport({ onImportSuccess }: BulkGPSImportProps) {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-2">📊 Download Template</h3>
           <p className="text-sm text-blue-700 mb-3">
-            Get the correct format with sample PNG coordinates for Central Province
+            Get the correct format with sample coordinates for {settings.region}
           </p>
           <Button onClick={downloadTemplate} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />

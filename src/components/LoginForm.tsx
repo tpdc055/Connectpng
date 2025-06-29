@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
+  const { settings } = useSystemSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +40,13 @@ export function LoginForm() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-12 h-8 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded shadow-lg"></div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Connect PNG</h1>
-              <div className="text-sm text-gray-600">Road Monitoring System</div>
+              <h1 className="text-2xl font-bold text-gray-900">{settings.systemName}</h1>
+              <div className="text-sm text-gray-600">{settings.systemDescription}</div>
             </div>
           </div>
-          <h2 className="text-lg text-gray-700 font-semibold">Maria Pori Road Construction</h2>
+          <h2 className="text-lg text-gray-700 font-semibold">Project Management System</h2>
           <Badge variant="outline" className="bg-blue-50 border-blue-300 text-blue-800">
-            Production System - ITCFA Project
+            {settings.defaultProjectName}
           </Badge>
         </div>
 
@@ -68,7 +70,7 @@ export function LoginForm() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your.email@connectpng.com"
+                  placeholder={`your.email@${settings.contactDomain}`}
                   required
                 />
               </div>
@@ -107,10 +109,10 @@ export function LoginForm() {
           <div className="bg-white/50 backdrop-blur-sm rounded-lg p-3 border border-gray-200">
             <div className="flex items-center justify-center gap-2 mb-2">
               <div className="w-4 h-3 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded"></div>
-              <span className="font-semibold text-gray-700">Papua New Guinea Government</span>
+              <span className="font-semibold text-gray-700">{settings.organizationName}</span>
             </div>
-            <p className="text-gray-600">Official Road Construction Monitoring Platform</p>
-            <p className="text-gray-500 mt-1">Central Province Infrastructure Development</p>
+            <p className="text-gray-600">{settings.systemDescription}</p>
+            <p className="text-gray-500 mt-1">{settings.organizationSubtitle}</p>
           </div>
           <p className="text-gray-400">🔒 Secure access required • Contact administrator for account registration</p>
         </div>

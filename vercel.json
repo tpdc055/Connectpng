@@ -1,20 +1,47 @@
 {
-  "buildCommand": "prisma generate && next build",
-  "devCommand": "next dev", 
-  "installCommand": "bun install",
+  "version": 2,
+  "buildCommand": "npm run vercel-build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
   "framework": "nextjs",
+  "regions": ["sin1", "syd1"],
   "functions": {
-    "src/app/api/**/*.ts": {
+    "src/app/api/**": {
       "maxDuration": 30
     }
   },
-  "env": {
-    "SKIP_ENV_VALIDATION": "1"
-  },
-  "build": {
-    "env": {
-      "SKIP_ENV_VALIDATION": "1"
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 2 * * *"
     }
-  },
-  "regions": ["cle1", "iad1"]
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

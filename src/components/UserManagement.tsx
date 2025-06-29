@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ interface NewUser {
 }
 
 export function UserManagement() {
+  const { settings } = useSystemSettings();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -233,12 +235,12 @@ export function UserManagement() {
             <div className="w-8 h-6 bg-gradient-to-r from-red-600 via-black to-yellow-400 rounded shadow-sm"></div>
             <h2 className="text-3xl font-bold text-gray-900">Live User Management</h2>
             <Badge variant="outline" className="bg-green-100 border-green-500 text-green-800">
-              Production System
+              {settings.systemName}
             </Badge>
           </div>
           <p className="text-gray-600 mt-2">Create and manage user accounts for the PNG road construction monitoring system</p>
           <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded px-3 py-2 mt-3">
-            <strong>🏗️ Live Production:</strong> All users created here will have immediate access to the road monitoring system
+            <strong>🏗️ Live Production:</strong> All users created here will have immediate access to the {settings.systemDescription}
           </div>
         </div>
         {isAdmin && (
@@ -277,7 +279,7 @@ export function UserManagement() {
                     type="email"
                     value={newUser.email}
                     onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="user@connectpng.com"
+                    placeholder={`user@${settings.contactDomain}`}
                     required
                   />
                 </div>

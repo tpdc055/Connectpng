@@ -30,21 +30,10 @@ interface ConstructionActivity {
   };
 }
 
-interface ProjectUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-}
-
 export function ActivityManagement() {
   const [activities, setActivities] = useState<ConstructionActivity[]>([]);
-  const [users, setUsers] = useState<ProjectUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<ConstructionActivity | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -60,7 +49,6 @@ export function ActivityManagement() {
   useEffect(() => {
     if (isAdmin) {
       fetchActivities();
-      fetchUsers();
     }
   }, [isAdmin]);
 
@@ -83,23 +71,6 @@ export function ActivityManagement() {
       setError('Error fetching activities');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || []);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
     }
   };
 
