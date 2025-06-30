@@ -7,15 +7,5 @@
       "maxDuration": 30
     }
   },
-  "regions": ["iad1"],
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "zeroConfig": true,
-        "experimentalUseV2Builds": true
-      }
-    }
-  ]
+  "regions": ["iad1"]
 }
