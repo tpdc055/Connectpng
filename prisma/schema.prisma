@@ -1,0 +1,446 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ✅ System Configuration (Dynamic)
+model SystemSettings {
+  id                    String   @id @default(cuid())
+
+  // System Branding
+  systemName           String   @default("Infrastructure Monitoring System")
+  systemSubtitle       String   @default("Project Management Platform")
+  organizationName     String   @default("Your Organization")
+  organizationSubtitle String   @default("Infrastructure Department")
+
+  // Login Page Configuration
+  loginTitle           String   @default("Secure Access Portal")
+  loginDescription     String   @default("Authorized personnel only - Enter your credentials to access the system")
+  loginFooterText      String   @default("Contact administrator for account registration")
+
+  // Dashboard Configuration
+  dashboardWelcomeTitle String  @default("Welcome to the System")
+  dashboardWelcomeText  String  @default("Select a project to start monitoring progress")
+
+  // System Colors & Branding
+  primaryColor         String   @default("#3B82F6") // Blue
+  secondaryColor       String   @default("#10B981") // Green
+  accentColor          String   @default("#F59E0B") // Orange
+  logoUrl              String?
+  faviconUrl           String?
+
+  // Currency & Locale
+  currencyCode         String   @default("USD")
+  currencySymbol       String   @default("$")
+  dateFormat           String   @default("MM/dd/yyyy")
+  timeZone             String   @default("UTC")
+
+  // Feature Toggles
+  enableGpsTracking    Boolean  @default(true)
+  enableContractors    Boolean  @default(true)
+  enableFinancials     Boolean  @default(true)
+  enableReports        Boolean  @default(true)
+
+  // Contact Information
+  supportEmail         String?
+  supportPhone         String?
+
+  isSetupComplete      Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model User {
+  id                      String                    @id @default(cuid())
+  name                    String
+  email                   String                    @unique
+  password                String
+  role                    Role                      @default(ENGINEER)
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  createdActivities       Activity[]
+  activity_logs           activity_logs[]
+  construction_activities construction_activities[]
+  construction_phases     construction_phases[]
+  gps_points              gps_points[]
+  project_activities      project_activities[]
+  tasks                   tasks[]
+  grantedAccess           UserProjectAccess[]       @relation("GrantedAccess")
+  projectAccess           UserProjectAccess[]
+
+  @@map("users")
+}
+
+model Project {
+  id                  String                @id @default(cuid())
+  name                String
+  description         String?
+  sponsor             String?
+  startDate           DateTime?
+  estimatedEndDate    DateTime?
+  actualEndDate       DateTime?
+  totalDistance       Float?
+  status              String                @default("PLANNED")
+  teamLead            String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  provinceId          String?
+  projectType         String?               @default("ROAD_CONSTRUCTION")
+  totalSections       Int?                  @default(1)
+  contractMethod      String?               @default("SINGLE_CONTRACTOR")
+  fundingSource       String?
+  governmentPriority  String?
+  latitude            Float?
+  longitude           Float?
+  activities          Activity[]
+  activity_logs       activity_logs[]
+  construction_phases construction_phases[]
+  contractor_projects contractor_projects[]
+  gps_points          gps_points[]
+  project_activities  project_activities[]
+  project_metrics     project_metrics[]
+  provinces           provinces?            @relation(fields: [provinceId], references: [id])
+  road_sections       road_sections[]
+  userAccess          UserProjectAccess[]
+
+  @@map("projects")
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  metadata    String?
+  timestamp   DateTime @default(now())
+  userId      String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("activities")
+}
+
+model UserProjectAccess {
+  id              String       @id @default(cuid())
+  userId          String
+  projectId       String
+  contractorId    String?
+  accessLevel     AccessLevel
+  allowedSections String[]
+  grantedBy       String
+  grantedAt       DateTime     @default(now())
+  expiresAt       DateTime?
+  isActive        Boolean      @default(true)
+  contractors     contractors? @relation(fields: [contractorId], references: [id])
+  grantedByUser   User         @relation("GrantedAccess", fields: [grantedBy], references: [id])
+  project         Project      @relation(fields: [projectId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, projectId])
+  @@map("user_project_access")
+}
+
+model activity_logs {
+  id                 String              @id
+  type               String
+  description        String
+  userId             String
+  projectId          String
+  projectActivityId  String?
+  oldValue           String?
+  newValue           String?
+  metadata           String?
+  contractorId       String?
+  sectionId          String?
+  timestamp          DateTime            @default(now())
+  contractors        contractors?        @relation(fields: [contractorId], references: [id])
+  project_activities project_activities? @relation(fields: [projectActivityId], references: [id])
+  projects           Project             @relation(fields: [projectId], references: [id])
+  road_sections      road_sections?      @relation(fields: [sectionId], references: [id])
+  users              User                @relation(fields: [userId], references: [id])
+}
+
+model construction_activities {
+  id                 String               @id
+  name               String
+  description        String?
+  color              String               @default("#3b82f6")
+  isActive           Boolean              @default(true)
+  createdBy          String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  users              User                 @relation(fields: [createdBy], references: [id])
+  gps_points         gps_points[]
+  project_activities project_activities[]
+  tasks              tasks[]
+}
+
+model construction_phases {
+  id               String    @id
+  name             String
+  description      String?
+  startDate        DateTime?
+  estimatedEndDate DateTime?
+  actualEndDate    DateTime?
+  status           String    @default("PLANNED")
+  progress         Float     @default(0)
+  totalLength      Float?
+  completedLength  Float?    @default(0)
+  projectId        String
+  assignedUserId   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+  users            User?     @relation(fields: [assignedUserId], references: [id])
+  projects         Project   @relation(fields: [projectId], references: [id])
+}
+
+model contractor_projects {
+  id                String         @id
+  contractorId      String
+  projectId         String
+  sections          String[]
+  contractValue     Decimal?
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  performanceBond   Decimal?
+  contractStatus    ContractStatus @default(ACTIVE)
+  performanceRating Decimal?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime
+  contractors       contractors    @relation(fields: [contractorId], references: [id])
+  projects          Project        @relation(fields: [projectId], references: [id])
+
+  @@unique([contractorId, projectId])
+}
+
+model contractors {
+  id                  String                @id
+  name                String
+  licenseNumber       String?               @unique
+  contactPerson       String?
+  email               String?
+  phone               String?
+  address             String?
+  specializations     String[]
+  activeProvinces     String[]
+  certificationLevel  String?
+  establishedDate     DateTime?
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  activity_logs       activity_logs[]
+  contractor_projects contractor_projects[]
+  gps_points          gps_points[]
+  road_sections       road_sections[]
+  user_project_access UserProjectAccess[]
+}
+
+model gps_points {
+  id                      String                   @id
+  latitude                Float
+  longitude               Float
+  elevation               Float?
+  accuracy                Float?
+  phase                   String
+  side                    String
+  distance                Float?
+  status                  String                   @default("PLANNED")
+  notes                   String?
+  timestamp               DateTime                 @default(now())
+  userId                  String
+  projectId               String
+  activityId              String?
+  sectionId               String?
+  contractorId            String?
+  construction_activities construction_activities? @relation(fields: [activityId], references: [id])
+  contractors             contractors?             @relation(fields: [contractorId], references: [id])
+  projects                Project                  @relation(fields: [projectId], references: [id])
+  road_sections           road_sections?           @relation(fields: [sectionId], references: [id])
+  users                   User                     @relation(fields: [userId], references: [id])
+  photos                  photos[]
+}
+
+model photos {
+  id          String     @id
+  url         String
+  filename    String
+  description String?
+  gpsPointId  String
+  uploadedAt  DateTime   @default(now())
+  gps_points  gps_points @relation(fields: [gpsPointId], references: [id])
+}
+
+model project_activities {
+  id                      String                  @id
+  projectId               String
+  activityId              String
+  assignedUserId          String?
+  status                  ActivityStatus          @default(PLANNED)
+  progress                Float                   @default(0)
+  startDate               DateTime?
+  estimatedEndDate        DateTime?
+  actualEndDate           DateTime?
+  totalLength             Float?
+  completedLength         Float?                  @default(0)
+  estimatedHours          Float?
+  actualHours             Float?                  @default(0)
+  priority                Priority                @default(MEDIUM)
+  notes                   String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime
+  activity_logs           activity_logs[]
+  construction_activities construction_activities @relation(fields: [activityId], references: [id])
+  users                   User?                   @relation(fields: [assignedUserId], references: [id])
+  projects                Project                 @relation(fields: [projectId], references: [id])
+  tasks                   tasks[]
+
+  @@unique([projectId, activityId])
+}
+
+model project_metrics {
+  id                String   @id
+  projectId         String
+  metricDate        DateTime
+  totalProgress     Decimal?
+  budgetUtilization Decimal?
+  workforceCount    Int?
+  activeContractors Int?
+  completedSections Int?
+  weatherDelays     Int?     @default(0)
+  safetyIncidents   Int?     @default(0)
+  qualityScore      Decimal?
+  createdAt         DateTime @default(now())
+  projects          Project  @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, metricDate])
+}
+
+model provinces {
+  id         String    @id
+  name       String
+  code       String    @unique
+  region     String
+  capital    String?
+  population Int?
+  createdAt  DateTime  @default(now())
+  projects   Project[]
+}
+
+model road_sections {
+  id                   String          @id
+  projectId            String
+  sectionName          String
+  startKm              Decimal
+  endKm                Decimal
+  totalLength          Decimal
+  difficultyLevel      String?
+  terrainType          String?
+  assignedContractorId String?
+  status               SectionStatus   @default(PLANNED)
+  startDate            DateTime?
+  targetCompletionDate DateTime?
+  actualCompletionDate DateTime?
+  budgetAllocated      Decimal?
+  budgetSpent          Decimal?        @default(0)
+  progressPercentage   Decimal?        @default(0)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime
+  activity_logs        activity_logs[]
+  gps_points           gps_points[]
+  contractors          contractors?    @relation(fields: [assignedContractorId], references: [id])
+  projects             Project         @relation(fields: [projectId], references: [id])
+}
+
+model sessions {
+  id        String   @id
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model tasks {
+  id                      String                   @id
+  name                    String
+  description             String?
+  projectActivityId       String?
+  activityId              String?
+  assignedUserId          String?
+  status                  TaskStatus               @default(PENDING)
+  progress                Float                    @default(0)
+  priority                Priority                 @default(MEDIUM)
+  estimatedHours          Float?
+  actualHours             Float?                   @default(0)
+  startDate               DateTime?
+  dueDate                 DateTime?
+  completedDate           DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime
+  construction_activities construction_activities? @relation(fields: [activityId], references: [id])
+  users                   User?                    @relation(fields: [assignedUserId], references: [id])
+  project_activities      project_activities?      @relation(fields: [projectActivityId], references: [id])
+}
+
+enum SectionStatus {
+  PLANNED
+  SURVEYING
+  DESIGN
+  TENDERING
+  CONSTRUCTION
+  TESTING
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum AccessLevel {
+  FULL
+  SECTION
+  READ_ONLY
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum ContractStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+  COMPLETED
+  PENDING
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SUPERVISOR
+  ENGINEER
+  WORKER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
