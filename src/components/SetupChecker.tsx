@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useSystemSettings } from '@/contexts/SystemSettingsContext'
-import { SetupWizard } from './SetupWizard'
 
 interface SetupCheckerProps {
   children: React.ReactNode
@@ -11,77 +9,30 @@ interface SetupCheckerProps {
 
 export function SetupChecker({ children }: SetupCheckerProps) {
   const [isLoading, setIsLoading] = useState(true)
-  const [requiresSetup, setRequiresSetup] = useState(false)
-  const { settings } = useSystemSettings()
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
-    const checkSetupStatus = async () => {
-      try {
-        // FORCE BYPASS SETUP WIZARD - GO DIRECTLY TO LOGIN
-        // This completely disables the setup wizard for production use
-        console.log('🚀 PNG Production System: Setup wizard bypassed - direct login access')
-        setRequiresSetup(false)
-        setIsLoading(false)
-        return
+    // PNG PRODUCTION SYSTEM: Setup wizard completely bypassed
+    // Direct access to login page for Papua New Guinea Department of Works
+    console.log('🇵🇬 PNG Road Construction Monitor: Direct login access enabled')
+    setIsLoading(false)
+  }, [])
 
-        // OLD CODE - DISABLED FOR PRODUCTION
-        // Check if system settings indicate setup is required
-        if (settings.requireSetup === true) {
-          setRequiresSetup(true)
-          setIsLoading(false)
-          return
-        }
-
-        // Check via API if no settings found locally
-        const response = await fetch('/api/system/setup-status')
-        if (response.ok) {
-          const data = await response.json()
-          setRequiresSetup(data.requiresSetup || false)
-        } else {
-          // If API fails, assume setup is needed for safety
-          setRequiresSetup(true)
-        }
-      } catch (error) {
-        console.warn('Setup status check failed, assuming setup required:', error)
-        setRequiresSetup(true)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkSetupStatus()
-  }, [settings])
-
-  const handleSetupComplete = () => {
-    setRequiresSetup(false)
-    // Redirect to main app
-    router.push('/')
-  }
-
-  // Show loading while checking setup status
+  // Show loading while initializing
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading PNG system...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-blue-800 font-medium">Loading PNG Road Construction Monitor...</p>
+          <p className="text-blue-600 text-sm mt-2">Papua New Guinea Department of Works</p>
         </div>
       </div>
     )
   }
 
-  // FORCE BYPASS - NEVER SHOW SETUP WIZARD IN PRODUCTION
-  // Always show the main app (login page) directly
-  return <>{children}</>
-
-  // OLD CODE - DISABLED
-  // Show setup wizard if setup is required and not on admin-debug page
-  if (requiresSetup && !pathname?.includes('/admin-debug')) {
-    return <SetupWizard onComplete={handleSetupComplete} />
-  }
-
-  // Show normal app if setup is complete
+  // PRODUCTION: Always show the main application (login page)
+  // No setup wizard blocking access for PNG government system
   return <>{children}</>
 }

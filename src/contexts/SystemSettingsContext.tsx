@@ -117,49 +117,50 @@ interface SystemSettings {
   country: string
 }
 
-const defaultSettings: SystemSettings = {
-  // System Branding (matches Prisma schema)
-  systemName: 'Road Construction Monitor',
+// PNG Production Settings - Get from environment variables or use PNG defaults
+const getPNGDefaults = (): SystemSettings => ({
+  // PNG System Branding (from environment variables or PNG defaults)
+  systemName: process.env.NEXT_PUBLIC_SYSTEM_NAME || 'PNG Road Construction Monitor',
   systemSubtitle: 'Professional Infrastructure Monitoring Platform',
-  organizationName: 'Infrastructure Department',
-  organizationSubtitle: 'Road Construction Division',
+  organizationName: process.env.NEXT_PUBLIC_ORGANIZATION_NAME || 'Papua New Guinea Department of Works',
+  organizationSubtitle: process.env.NEXT_PUBLIC_ORGANIZATION_SUBTITLE || 'Infrastructure Development Division',
 
-  // Login Page Configuration
+  // PNG Login Page Configuration
   loginTitle: 'Secure Access Portal',
-  loginDescription: 'Authorized personnel only - Enter your credentials to access the system',
-  loginFooterText: 'Contact administrator for account registration',
+  loginDescription: 'Authorized personnel only - Enter your credentials to access the live road construction monitoring system',
+  loginFooterText: 'Secure access required • Contact administrator for account registration',
 
-  // Dashboard Configuration
-  dashboardWelcomeTitle: 'Welcome to the System',
-  dashboardWelcomeText: 'Select a project to start monitoring progress',
+  // PNG Dashboard Configuration
+  dashboardWelcomeTitle: 'Welcome to PNG Road Construction Monitor',
+  dashboardWelcomeText: 'Monitor infrastructure development across Papua New Guinea',
 
-  // System Colors & Branding
-  primaryColor: '#3B82F6',
-  secondaryColor: '#10B981',
-  accentColor: '#F59E0B',
+  // PNG Government Theme Colors
+  primaryColor: process.env.NEXT_PUBLIC_PRIMARY_COLOR || '#1E40AF', // PNG Government Blue
+  secondaryColor: process.env.NEXT_PUBLIC_SECONDARY_COLOR || '#DC2626', // PNG Red
+  accentColor: process.env.NEXT_PUBLIC_ACCENT_COLOR || '#F59E0B', // PNG Gold
   logoUrl: undefined,
   faviconUrl: undefined,
 
-  // Currency & Locale
-  currencyCode: 'USD',
-  currencySymbol: '$',
-  dateFormat: 'MM/dd/yyyy',
-  timeZone: 'UTC',
+  // PNG Regional Settings
+  currencyCode: 'PGK', // Papua New Guinea Kina
+  currencySymbol: 'K', // Kina symbol
+  dateFormat: 'dd/MM/yyyy', // PNG standard date format
+  timeZone: 'Pacific/Port_Moresby', // PNG timezone
 
-  // Feature Toggles
+  // PNG Infrastructure Features (All enabled for comprehensive monitoring)
   enableGpsTracking: true,
   enableContractors: true,
   enableFinancials: true,
   enableReports: true,
 
-  // Contact Information
-  supportEmail: undefined,
-  supportPhone: undefined,
+  // PNG Government Contact Information
+  supportEmail: 'admin@png.gov.pg',
+  supportPhone: '+675-xxx-xxxx',
 
-  // Authentication Configuration
+  // PNG Production Authentication Configuration
   authMethod: 'local',
-  requireSetup: true, // Default to requiring setup for new installations
-  allowSelfRegistration: false,
+  requireSetup: false, // PRODUCTION: Setup wizard bypassed for PNG deployment
+  allowSelfRegistration: false, // Government system - admin controlled
   defaultUserRole: 'user',
   passwordPolicy: {
     minLength: 8,
@@ -170,36 +171,34 @@ const defaultSettings: SystemSettings = {
     expirationDays: 90
   },
 
-  // LDAP/Active Directory Configuration
+  // No LDAP/OAuth for initial PNG deployment
   ldapConfig: undefined,
-
-  // OAuth Configuration
   oauthConfig: undefined,
 
-  // Role Configuration
+  // PNG Standard Roles
   customRoles: [],
-
-  // Permission Configuration
   customPermissions: [],
 
-  // Access Control
+  // PNG Government Access Control
   accessControl: {
     enableProjectLevelAccess: true,
     enableSectionLevelAccess: true,
     enableIPRestriction: false,
     allowedIPs: undefined,
-    sessionTimeout: 3600,
-    maxConcurrentSessions: 10
+    sessionTimeout: 3600, // 1 hour for government use
+    maxConcurrentSessions: 5 // Reasonable limit for PNG team
   },
 
-  // Legacy compatibility properties (for existing components)
-  systemDescription: 'Professional Infrastructure Monitoring Platform',
-  defaultProjectName: 'Road Construction Project',
-  defaultProjectDescription: 'Infrastructure development and monitoring',
-  contactDomain: 'infrastructure.gov',
-  region: 'Regional Development Zone',
-  country: 'Development Region'
-}
+  // PNG Legacy Compatibility Properties
+  systemDescription: process.env.NEXT_PUBLIC_SYSTEM_DESCRIPTION || 'Professional Infrastructure Monitoring Platform',
+  defaultProjectName: process.env.NEXT_PUBLIC_DEFAULT_PROJECT_NAME || 'Road Construction Project',
+  defaultProjectDescription: 'Papua New Guinea road infrastructure development and monitoring',
+  contactDomain: process.env.NEXT_PUBLIC_CONTACT_DOMAIN || 'png.gov.pg',
+  region: process.env.NEXT_PUBLIC_REGION || 'Papua New Guinea',
+  country: process.env.NEXT_PUBLIC_COUNTRY || 'Papua New Guinea'
+})
+
+const defaultSettings: SystemSettings = getPNGDefaults()
 
 interface SystemSettingsContextType {
   settings: SystemSettings

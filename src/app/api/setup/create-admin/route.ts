@@ -20,16 +20,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if any admin users already exist (security check)
+    // Check if this specific email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() }
+    });
+
+    if (existingUser) {
+      return NextResponse.json({
+        error: 'An account with this email address already exists'
+      }, { status: 409 });
+    }
+
+    // For PNG deployment: Allow multiple admins but warn if others exist
     const existingAdminCount = await prisma.user.count({
       where: { role: 'ADMIN' }
     });
 
-    if (existingAdminCount > 0) {
-      return NextResponse.json({
-        error: 'Admin user already exists. Use user management to create additional administrators.'
-      }, { status: 403 });
-    }
+    const isFirstAdmin = existingAdminCount === 0;
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -53,12 +60,16 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ Initial admin user created: ${adminUser.email}`);
+    console.log(`✅ ${isFirstAdmin ? 'Initial' : 'Additional'} admin user created: ${adminUser.email}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Initial administrator account created successfully',
+      message: isFirstAdmin
+        ? 'Initial PNG administrator account created successfully'
+        : 'Additional PNG administrator account created successfully',
       admin: adminUser,
+      isFirstAdmin,
+      existingAdminCount: existingAdminCount + 1,
       timestamp: new Date().toISOString()
     });
 
